@@ -1,6 +1,6 @@
 #include "vectorOperators.h"
 
-double operator & (const state_type& lhs, const state_type& rhs)
+/*double operator & (const state_type& lhs, const state_type& rhs)
 {
     double result = 0;
     for (int i = 0; i < lhs.size(); i++)
@@ -30,4 +30,4 @@ state_type& operator -= (state_type &vec, const state_type &scr)
         vec[i] -= scr[i];
     }
     return vec;
-}
+}*/

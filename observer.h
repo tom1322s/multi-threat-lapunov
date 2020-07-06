@@ -2,7 +2,8 @@
 #define OBSERVER_H_INCLUDED
 
 #include <vector>
-typedef std::vector< double > state_type;
+#include <array>
+//typedef std::vector< double > state_type;
 
 //double liczWartosc(state_type &x, int numberPer);
 //void normVector(state_type &x, int numberPer);
@@ -48,15 +49,15 @@ struct Obs
         }
     }
 };*/
-template<typename OSC>
+template<typename OSC,typename state_type>
 struct pushBackTimeAndState
 {
-    state_type& times;
+    std::vector< double >& times;
     std::vector< state_type >& states;
     double tTemp;
     OSC &Osc;
 
-    pushBackTimeAndState( state_type &times, std::vector< state_type > &states, OSC &Osc )
+    pushBackTimeAndState( std::vector< double > &times, std::vector< state_type > &states, OSC &Osc )
     : times( times ), states( states ) , tTemp(0) , Osc(Osc){ }
 
     void operator()( state_type &x , double t )
