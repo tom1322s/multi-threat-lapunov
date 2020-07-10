@@ -15,9 +15,11 @@ using std::chrono::high_resolution_clock;
 
 void timePhraseLaypunov()
 {
-    std::fstream File;
-    File.open( "C:\\chwilowy\\prog\\timePhrase.txt", std::ios::out );
-    if( File.good() == false )
+    std::fstream FileL, FileT, FileP;
+    FileP.open( "C:\\chwilowy\\prog\\timePhrase.txt", std::ios::out );
+    FileL.open( "C:\\chwilowy\\prog\\timeLaponov.txt", std::ios::out );
+    FileT.open( "C:\\chwilowy\\prog\\time.txt", std::ios::out );
+    if( FileP.good() == false ||  FileT.good() == false || FileL.good() == false)
     {
         std::cout<<"blad"<<std::endl;
         //std::cerr << "Error: " << strerror(errno);
@@ -26,8 +28,9 @@ void timePhraseLaypunov()
 
     HarmOsc Osc;
     std::vector<double> times;
-    std::vector<state_type> x_vec;
-    pushBackTimeAndState<HarmOsc,state_type> bufferInfo( times, x_vec,Osc);
+    std::vector<std::vector<double>> x_vec;
+    std::vector<std::vector<double>> lambda;
+    pushBackTimeAndState<HarmOsc> bufferInfo( times, x_vec,Osc);
 
     state_type x;
     inicialValues(x);
@@ -41,39 +44,48 @@ void timePhraseLaypunov()
     Osc.printInfo();
     double delta = 1e-6;
     state_type lambdaSum;
-    std::vector<double> calTime;
+    std::vector<std::vector<double>> calTime;
 
-   for (double t = Osc.t0; t < Osc.nouberOfPeriodSkiped*Osc.T; t+=Osc.T)
+   for (long int step = 0; step < Osc.nouberOfPeriodSkiped; step++)
+    //(double t = Osc.t0; t < Osc.nouberOfPeriodSkiped*Osc.T; t+=Osc.T)
     {
+        double t = Osc.t0 + step * Osc.T;
         const auto startTime = std::chrono::high_resolution_clock::now();
 
 
         std::array<state_type,ORDER> v;
-        /*std::future<state_type> thread[Osc.order];
+
+#if MULTI_THREAD
+        //std::future<state_type> thread[Osc.order];
+
+        std::array<std::future<state_type>,ORDER> thread;
         for (int i = 0; i < Osc.order; i++)
         {
-            v.push_back(state_type (x));
+            v[i]=x;
             v[i][i]+=delta;
-            thread[i] = std::async(std::launch::async, &integrateConst<HarmOsc>, Osc,v[i],t,t+Osc.T,Osc.dt);
+            thread[i] = std::async(std::launch::async, &integrateConstR<HarmOsc,state_type>, Osc,v[i],t,t+Osc.T,Osc.dt);
         }
         integrateConst(Osc,x,t,t+Osc.T,Osc.dt,bufferInfo);
         for (int i = 0; i < Osc.order; i++)
         {
             v[i] = thread[i].get();
-        }*/
+        }
 
+#else
         for (int i = 0; i < ORDER; i++)
         {
             v[i] = x;
             v[i][i]+=delta;
-            integrateConst(Osc,v[i],t,t+Osc.T,Osc.dt,bufferInfo);
+            integrateConst(Osc,v[i],t,t+Osc.T,Osc.dt);
         }
         integrateConst(Osc,x,t,t+Osc.T,Osc.dt,bufferInfo);
+
+#endif // MULTI_THREAD
 
 
         const auto endTime = std::chrono::high_resolution_clock::now();
 
-        calTime.push_back(duration_cast<duration<double, std::milli>>(endTime-startTime).count());
+        calTime.push_back({t,duration_cast<duration<double, std::milli>>(endTime-startTime).count()});
 
 
 
@@ -86,22 +98,8 @@ void timePhraseLaypunov()
             }
         }
 
-        //for(int i = 0; i < ORDER; i++)
-        //{
-        //    for(int j = 0; j < ORDER; j++)
-        //    {
-        //        std::cout<<jacobiMatrix[i][j]<<"\t";
-        //    }
-        //    std::cout<<std::endl;
-        //}
-
-        //for_each(z.begin(),z.end(),[](double i){std::cout<<i<<"\t";});
-        //std::cout<<std::endl;
-
-
         for(auto& z:spectrum_z)
         {
-
             state_type dzdt;
             for(size_t i = 0; i < z.size(); i++)
             {
@@ -125,10 +123,13 @@ void timePhraseLaypunov()
         }
 
 
-        /*std::cout<<static_cast<int>(t/Osc.T)<<std::endl;
-        for (auto i:lambdaSum) std::cout<<i/t<<"\t\t";
+        if (step % 100 == 0 ) std::cout<<static_cast<int>(t/Osc.T)<<std::endl;
+        /*for (auto i:lambdaSum) std::cout<<i/t<<"\t\t";
         std::cout<<std::endl;*/
 
+        FileL << t;
+        for (auto i:lambdaSum) FileL<<";"<<i/t;
+        FileL << std::endl;
     }
 
     for (auto i:lambdaSum) std::cout<<i/(Osc.nouberOfPeriodSkiped*Osc.T)<<"\n";
@@ -158,30 +159,32 @@ void timePhraseLaypunov()
 
     std::cout<<"Rozpoczynam zapis do pliku\n";
 
-    /*for (unsigned int i = 0; i < times.size(); i++)
+    for (unsigned int i = 0; i < times.size(); i++)
     {
-        File << times[i];
+        FileP << times[i];
         for(int j = 0; j < Osc.order; j++)
         {
-            File << ';' << x_vec[i][j];
+            FileP << ';' << x_vec[i][j];
         }
-        //File << ';' << lambda[i];
-        //File << ';' << lambda2[i];
-        File << '\n';
-    }*/
+        FileP << '\n';
+    }
 
     double sumT=0;
     for(auto i:calTime)
     {
-        File << i << ';';
-        File << (sumT+=i) << '\n';
+        FileT << i[0] << ';';
+        FileT << i[1] << ';';
+        FileT << (sumT+=i[1]) << '\n';
     }
 
-    File.close();
+    FileP.close();
+    FileT.close();
+    FileL.close();
 }
 
 void timePhraseLaypunovSDCount()
 {
+
    /* std::fstream File;
     File.open( "C:\\chwilowy\\prog\\timePhrase.txt", std::ios::out );
     if( File.good() == false )

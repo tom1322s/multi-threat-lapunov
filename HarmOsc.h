@@ -3,6 +3,9 @@
 
 #include <array>
 #define ORDER 6
+
+#define MULTI_THREAD 1
+
 typedef std::array<double,ORDER> state_type;
 
 class HarmOsc
@@ -22,7 +25,7 @@ class HarmOsc
 
         const int order = ORDER;
         const double sdVal = 1e-9;
-        const int nouberOfPeriodSkiped = 1000;//300.0
+        const int nouberOfPeriodSkiped = 300;//300.0
         const int nouberOfPeriodCount = 10;
         //nouberOfPeriodPoincare 200;
         const double t0 = 0.0;

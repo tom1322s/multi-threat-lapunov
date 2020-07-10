@@ -7,7 +7,7 @@ HarmOsc::HarmOsc()
     biff_type=1;
     // 1 - for k, 2 - for d, 3 - for a
 
-    k = 0.0;
+    k = 0;
     d = 0.3;
     a = 0.1;
 

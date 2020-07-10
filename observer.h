@@ -49,25 +49,29 @@ struct Obs
         }
     }
 };*/
-template<typename OSC,typename state_type>
+template<typename OSC>
 struct pushBackTimeAndState
 {
     std::vector< double >& times;
-    std::vector< state_type >& states;
+    std::vector< std::vector< double > >& states;
     double tTemp;
     OSC &Osc;
 
-    pushBackTimeAndState( std::vector< double > &times, std::vector< state_type > &states, OSC &Osc )
+    pushBackTimeAndState( std::vector< double > &times, std::vector< std::vector< double > > &states, OSC &Osc )
     : times( times ), states( states ) , tTemp(0) , Osc(Osc){ }
 
-    void operator()( state_type &x , double t )
+    template <typename T>
+    void operator()( T &x , double t )
     {
-        /*if((t - tTemp) > Osc.T/100)
+        if((t - tTemp) > Osc.T/100)
         {
             times.push_back( t );
-            states.push_back( x );
+            std::vector<double> temp;
+            temp.reserve(x.size());
+            for(auto i:x) temp.push_back(i);
+            states.push_back( temp );
             tTemp = t;
-        }*/
+        }
     }
 };
 

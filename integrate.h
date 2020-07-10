@@ -96,25 +96,48 @@ void integrateConst(System system,state_type &x, const double t0, const double t
 }
 
 
-/*template < typename System>
+template < typename System,typename state_type>
 void integrateConst(const System& system,state_type &x, const double t0, const double tMax, const double dt)
 {
-    state_type dxdt(x.size());
-    for (double t = t0; t < tMax; t+=dt)
+    state_type dxdt;
+    long int steps = (tMax-t0)/dt;
+
+    for (long int i = 0; i < steps; i++)
     {
-        if(t+dt<=tMax)
-        {
-            rk4(system,x,dxdt,t, dt);
-            x+=dxdt;
-        }
-        else
-        {
-            rk4(system,x,dxdt,t, tMax-t);
-            x+=dxdt;
-        }
+        double t = t0 + i * dt;
+        rk4(system,x,dxdt,t, dt);
+        x+=dxdt;
     }
 
-}*/
+
+    if(double t(t0 + steps*dt);tMax - t > 0)
+    {
+        rk4(system,x,dxdt,t, tMax-t);
+        x+=dxdt;
+    }
+}
+
+template < typename System,typename state_type>
+state_type integrateConstR(const System& system,state_type x, const double t0, const double tMax, const double dt)
+{
+    state_type dxdt;
+    long int steps = (tMax-t0)/dt;
+
+    for (long int i = 0; i < steps; i++)
+    {
+        double t = t0 + i * dt;
+        rk4(system,x,dxdt,t, dt);
+        x+=dxdt;
+    }
+
+
+    if(double t(t0 + steps*dt);tMax - t > 0)
+    {
+        rk4(system,x,dxdt,t, tMax-t);
+        x+=dxdt;
+    }
+    return x;
+}
 
 /* !!!!template < typename System>
 state_type integrateConst(const System& system,state_type x, const double t0, const double tMax, const double dt)
