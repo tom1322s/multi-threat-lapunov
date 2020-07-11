@@ -15,8 +15,20 @@ void inicialValues(T &x)
         //i=0.5;
     }
 }
+template <typename T>
+T countSD(const std::vector<T> &vec)
+{
+    T averege;
+    for(auto& i:averege) i=0.0;
+    for_each(vec.begin(),vec.end(),[&averege](T i) {averege+=i;});
+    averege/=vec.size();
 
-//double countSD(const state_type &vec);
+    T sd;
+    for(auto& i:sd) i=0.0;
+    for_each(vec.begin(),vec.end(),[&sd,averege](T i) {sd+=odj(i,averege)*odj(i,averege);});
+    sd/=vec.size();
+    return sd;
+}
 
 template <typename T>
 double liczWartosc(const T &vec)
@@ -38,7 +50,17 @@ void normVector(T &vec)
         i /= val;
     }
 }
-//bool isSdGood(const std::vector<double>& sd, double maxVal);*/
+
+template <typename T>
+bool isSdGood(const T& sd, double maxVal)
+{
+    bool result = false;
+    for(auto i:sd)
+    {
+        result |= (i > maxVal);
+    }
+    return result;
+}
 
 
 #endif // FUNCTIONS_H_INCLUDED

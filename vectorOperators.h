@@ -17,6 +17,28 @@ double operator & (const state_type& lhs, const state_type& rhs)
 }
 
 template <typename state_type>
+state_type operator * (const state_type& lhs, const state_type& rhs)
+{
+    state_type result;
+    for (size_t i = 0; i < lhs.size(); i++)
+    {
+        result[i] = lhs[i] * rhs[i];
+    }
+    return result;
+}
+
+template <typename state_type>
+state_type odj (const state_type& lhs, const state_type& rhs)
+{
+    state_type result;
+    for (size_t i = 0; i < lhs.size(); i++)
+    {
+        result[i] = lhs[i] - rhs[i];
+    }
+    return result;
+}
+
+template <typename state_type>
 state_type operator * (const state_type& scr, double scalar)
 {
     state_type result;
@@ -26,6 +48,7 @@ state_type operator * (const state_type& scr, double scalar)
     }
     return result;
 }
+
 
 template <typename state_type>
 state_type& operator += (state_type &v1, const state_type &v2)
@@ -45,6 +68,16 @@ state_type& operator -= (state_type &vec, const state_type &scr)
     for(unsigned int i=0; i < vec.size(); i++)
     {
         vec[i] -= scr[i];
+    }
+    return vec;
+}
+
+template <typename state_type>
+state_type& operator /= (state_type &vec, double x)
+{
+    for(auto& i:vec)
+    {
+        i /= x;
     }
     return vec;
 }
