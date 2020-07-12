@@ -20,7 +20,7 @@ int main()
         break;
         case 2:
         {
-            //biffurAndLambda();
+            biffurAndLambda();
         }
         break;
         case 3:
