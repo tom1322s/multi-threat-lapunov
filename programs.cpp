@@ -231,11 +231,15 @@ void biffurAndLambda()
         double t=0.0;
 
         //
-        inicialValues(x);
-        for(auto& i:spectrum_z)
+        if (liczWartosc(x)<1e-3)
+        {
+            inicialValues(x);
+        }
+
+        /*for(auto& i:spectrum_z)
         {
             inicialValues(i);
-        }
+        }*/
         //
 
         #if TIME_SD
@@ -388,3 +392,262 @@ void biffurAndLambda()
     FileT.close();
     FileL.close();
 }
+
+void timePhraseLaypunov2()
+{
+    std::fstream FileL, FileT, FileP;
+    FileP.open( "C:\\chwilowy\\prog\\2timePhrase.txt", std::ios::out );
+    FileL.open( "C:\\chwilowy\\prog\\2timeLaponov.txt", std::ios::out );
+    FileT.open( "C:\\chwilowy\\prog\\2diff.txt", std::ios::out );
+    if( FileP.good() == false ||  FileT.good() == false || FileL.good() == false)
+    {
+        std::cout<<"blad"<<std::endl;
+        //std::cerr << "Error: " << strerror(errno);
+        exit(250);
+    }
+
+    FileT<<"dx0;kwx0";
+    for(int i =1;i<ORDER;i++) FileT<<";dx"<<i<<";kwx"<<i;
+    for(int i =0;i<ORDER;i++)
+    {
+        FileT<<";dL"<<i<<";"<<"kwL"<<i;
+    }
+    FileT<<std::endl;
+
+    state_type xSumK;
+    for(auto& i:xSumK) i=0.0;
+    state_type lamSumK;
+    for(auto& i:lamSumK) i=0.0;
+
+    HarmOsc Osc;
+    std::vector<double> times1;
+    std::vector<std::vector<double>> x_vec1;
+    pushBackTimeAndState<HarmOsc> bufferInfo1( times1, x_vec1,Osc);
+    std::vector<double> times2;
+    std::vector<std::vector<double>> x_vec2;
+    pushBackTimeAndState<HarmOsc> bufferInfo2( times2, x_vec2,Osc);
+
+    state_type x1;
+    inicialValues(x1);
+    state_type x2;
+    x2=x1;
+
+    std::array<state_type,ORDER> spectrum_z1;
+    for(auto& i:spectrum_z1)
+    {
+        inicialValues(i);
+    }
+    std::array<state_type,ORDER> spectrum_z2;
+    spectrum_z2=spectrum_z1;
+
+    Osc.printInfo();
+    double delta = 1e-6;
+    state_type lambdaSum1;
+    state_type lambdaSum2;
+    std::vector<std::vector<double>> diffPar;
+
+    double t1=0.0;
+    double t2=0.0;
+
+#if TIME_SD
+    state_type sd1;
+    for(auto& i:sd1) i = 1.0;
+    std::vector<state_type> lambdaBuffer1;
+    state_type sd2;
+    for(auto& i:sd2) i = 1.0;
+    std::vector<state_type> lambdaBuffer2;
+#endif // TIME_SD
+
+#if TIME_SD
+    for (long int step = 0; step < Osc.nouberOfPeriodSkiped || isSdGood(sd1, Osc.sdVal); step++)
+#else
+    for (long int step = 0; step < Osc.nouberOfPeriod; step++)
+#endif // TIME_SD
+    {
+        t1 = Osc.t0 + step * Osc.T;
+
+
+        std::array<state_type,ORDER> v1;
+        std::array<state_type,ORDER> v2;
+
+
+        std::array<std::future<state_type>,ORDER> thread1;
+        std::array<std::future<state_type>,ORDER> thread2;
+        for (int i = 0; i < Osc.order; i++)
+        {
+            v1[i]=x1;
+            v1[i][i]+=delta;
+            thread1[i] = std::async(std::launch::async, &integrateConstR<HarmOsc,state_type>, Osc,v1[i],t1,t1+Osc.T,Osc.dt);
+            v2[i]=x2;
+            v2[i][i]+=delta;
+            thread2[i] = std::async(std::launch::async, &integrateConstRStare<HarmOsc,state_type>, Osc,v2[i],t2,t2+Osc.T,Osc.dt);
+        }
+        integrateConst(Osc,x1,t1,t1+Osc.T,Osc.dt,bufferInfo1);
+        integrateConstStare(Osc,x2,t2,t2+Osc.T,Osc.dt,bufferInfo2);
+        for (int i = 0; i < Osc.order; i++)
+        {
+            v1[i] = thread1[i].get();
+        }
+        for (int i = 0; i < Osc.order; i++)
+        {
+            v2[i] = thread2[i].get();
+        }
+
+
+
+
+        std::array<std::array<double,ORDER>,ORDER> jacobiMatrix1;
+        for(int i = 0; i < Osc.order; i++)
+        {
+            for(int j = 0; j < Osc.order; j++)
+            {
+                jacobiMatrix1[i][j] = (v1[j][i] - x1[i])/delta;
+            }
+        }
+
+        for(auto& z:spectrum_z1)
+        {
+            state_type dzdt;
+            for(size_t i = 0; i < z.size(); i++)
+            {
+                for(size_t j = 0; j < z.size(); j++)
+                {
+                    dzdt[i]+=jacobiMatrix1[i][j]*z[j];
+                }
+            }
+
+            z=dzdt;
+        }
+
+        for(size_t i = 0; i < spectrum_z1.size(); i++)
+        {
+            for(size_t j = 0; j < i; j++)
+            {
+                spectrum_z1[i] -= spectrum_z1[j] * (spectrum_z1[i] & spectrum_z1[j]);
+            }
+            lambdaSum1[i]+=log(liczWartosc(spectrum_z1[i]));
+            normVector(spectrum_z1[i]);
+        }
+
+        std::array<std::array<double,ORDER>,ORDER> jacobiMatrix2;
+        for(int i = 0; i < Osc.order; i++)
+        {
+            for(int j = 0; j < Osc.order; j++)
+            {
+                jacobiMatrix2[i][j] = (v2[j][i] - x2[i])/delta;
+            }
+        }
+
+        for(auto& z:spectrum_z2)
+        {
+            state_type dzdt;
+            for(size_t i = 0; i < z.size(); i++)
+            {
+                for(size_t j = 0; j < z.size(); j++)
+                {
+                    dzdt[i]+=jacobiMatrix2[i][j]*z[j];
+                }
+            }
+
+            z=dzdt;
+        }
+
+        for(size_t i = 0; i < spectrum_z2.size(); i++)
+        {
+            for(size_t j = 0; j < i; j++)
+            {
+                spectrum_z2[i] -= spectrum_z2[j] * (spectrum_z2[i] & spectrum_z2[j]);
+            }
+            lambdaSum2[i]+=log(liczWartosc(spectrum_z2[i]));
+            normVector(spectrum_z2[i]);
+        }
+
+        if (step % 100 == 0 ) std::cout<<static_cast<int>(t1/Osc.T)<<std::endl;
+
+#if TIME_SD
+        state_type tempLambda;
+        for(size_t i = 0; i < lambdaSum1.size(); i++)
+        {
+            tempLambda[i]=(lambdaSum1[i]/(t1-Osc.t0));
+        }
+        lambdaBuffer1.push_back(tempLambda);
+
+        if(lambdaBuffer1.size() >= 100)
+        {
+            sd1 = countSD(lambdaBuffer1);
+            lambdaBuffer1.clear();
+            //for(auto i:sd) std::cout<<i<<"\t";
+            //std::cout<<std::endl;
+
+        }
+
+        for(size_t i = 0; i < lambdaSum2.size(); i++)
+        {
+            tempLambda[i]=(lambdaSum2[i]/(t2-Osc.t0));
+        }
+        lambdaBuffer2.push_back(tempLambda);
+
+        if(lambdaBuffer2.size() >= 100)
+        {
+            sd2 = countSD(lambdaBuffer2);
+            lambdaBuffer2.clear();
+            //for(auto i:sd) std::cout<<i<<"\t";
+            //std::cout<<std::endl;
+
+        }
+#endif // TIME_SD
+
+
+
+        FileL << t1;
+        for (auto i:lambdaSum1) FileL<<";"<<i/(t1-Osc.t0);
+        FileL << t2;
+        for (auto i:lambdaSum2) FileL<<";"<<i/(t2-Osc.t0);
+        FileL << std::endl;
+
+
+
+        for(int i = 0; i<ORDER; i++)
+        {
+            xSumK[i]+=pow(x2[i]-x1[i],2);
+            lamSumK[i]+=pow((lambdaSum2[i]/(t2-Osc.t0))-(lambdaSum1[i]/(t1-Osc.t0)),2);
+        }
+
+        FileT<<x2[0]-x1[0]<<";"<<xSumK[0];
+        for(int i = 1; i<ORDER; i++) FileT<<";"<<x2[i]-x1[i]<<";"<<xSumK[i];
+        for(int i = 0; i<ORDER; i++)
+        {
+            FileT<<";"<<(lambdaSum2[i]/(t2-Osc.t0))-(lambdaSum1[i]/(t1-Osc.t0))<<";"<<xSumK[i];
+        }
+        FileT << std::endl;
+
+        t2 += Osc.T;
+    }
+
+    //for (auto i:lambdaSum) std::cout<<i/(t-Osc.t0)<<"\n";
+
+
+    std::cout<<"Rozpoczynam zapis do pliku\n";
+
+    for (unsigned int i = 0; i < times1.size(); i++)
+    {
+        FileP << times1[i];
+        for(int j = 0; j < Osc.order; j++)
+        {
+            FileP << ';' << x_vec1[i][j];
+        }
+        FileP << times2[i];
+        for(int j = 0; j < Osc.order; j++)
+        {
+            FileP << ';' << x_vec2[i][j];
+        }
+        FileP << '\n';
+    }
+
+
+
+    FileP.close();
+    FileT.close();
+    FileL.close();
+}
+

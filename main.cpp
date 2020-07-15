@@ -25,7 +25,7 @@ int main()
         break;
         case 3:
         {
-            ;
+            timePhraseLaypunov2();
         }
         break;
     }

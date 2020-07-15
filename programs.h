@@ -14,7 +14,7 @@
 
 
 void timePhraseLaypunov();
-void timePhraseLaypunovSDCount();
+void timePhraseLaypunov2();
 void biffurAndLambda();
 
 

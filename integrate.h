@@ -139,6 +139,28 @@ state_type integrateConstR(const System& system,state_type x, const double t0, c
     return x;
 }
 
+template < typename System,typename state_type>
+state_type integrateConstRStare(const System& system,state_type x, const double t0, const double tMax, const double dt)
+{
+    state_type dxdt;
+
+    for (double t = t0; t < tMax; t+=dt)
+    {
+        if(t+dt<=tMax)
+        {
+            rk4(system,x,dxdt,t, dt);
+            x+=dxdt;
+        }
+        else
+        {
+            rk4(system,x,dxdt,t, tMax-t);
+            x+=dxdt;
+        }
+    }
+
+    return x;
+}
+
 /* !!!!template < typename System>
 state_type integrateConst(const System& system,state_type x, const double t0, const double tMax, const double dt)
 {
