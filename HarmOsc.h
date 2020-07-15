@@ -40,7 +40,7 @@ class HarmOsc
 
         const double BIFF_START = 0.0;
         const double BIFF_STOP = 4.0;
-        const double dBIFF = ((BIFF_STOP - BIFF_START) / 1000.0);
+        const double dBIFF = ((BIFF_STOP - BIFF_START) / 200.0);
 
         //const double dtVal=37890.0/10.0; // !!!!!!!!
 

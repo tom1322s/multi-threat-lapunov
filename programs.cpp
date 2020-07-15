@@ -5,6 +5,7 @@
 #include <fstream>
 //#include <math.h>
 #include <chrono>
+#include <set>
 
 using std::chrono::duration;
 using std::chrono::duration_cast;
@@ -203,8 +204,8 @@ void biffurAndLambda()
     }
 
     HarmOsc Osc;
-    std::vector<double> times;
-    std::vector<state_type> x_vec;
+    //std::vector<double> times;
+    //std::vector<state_type> x_vec;
     //std::vector<std::vector<double>> lambda;
 
     state_type x;
@@ -223,6 +224,8 @@ void biffurAndLambda()
     int counter = 0;
     for (double biff = Osc.BIFF_START; biff < Osc.BIFF_STOP; biff+=Osc.dBIFF)
     {
+        std::set<double> x_P;
+        pushBackPoicare bufferInfo(x_P);
         state_type lambdaSum = {};
         std::cout<<counter++;
         Osc.changeBiffurParametr(biff);
@@ -268,7 +271,20 @@ void biffurAndLambda()
                 v[i][i]+=delta;
                 thread[i] = std::async(std::launch::async, &integrateConstR<HarmOsc,state_type>, Osc,v[i],t,t+Osc.T,Osc.dt);
             }
-            integrateConst(Osc,x,t,t+Osc.T,Osc.dt);
+
+#if TIME_SD
+            if (sd[0]<Osc.sdVal*10)
+#else
+            if (step > 0.9*Osc.nouberOfPeriod)
+#endif // TIME_SD
+            {
+                integrateConst(Osc,x,t,t+Osc.T,Osc.dt,bufferInfo);
+            }
+            else
+            {
+                integrateConst(Osc,x,t,t+Osc.T,Osc.dt);
+            }
+
             for (int i = 0; i < Osc.order; i++)
             {
                 v[i] = thread[i].get();
@@ -281,20 +297,20 @@ void biffurAndLambda()
                 v[i][i]+=delta;
                 integrateConst(Osc,v[i],t,t+Osc.T,Osc.dt);
             }
-            integrateConst(Osc,x,t,t+Osc.T,Osc.dt);
-
-#endif // MULTI_THREAD
-
 #if TIME_SD
-            //if (step > 0.8*Osc.nouberOfPeriodSkiped)
             if (sd[0]<Osc.sdVal*10)
 #else
             if (step > 0.9*Osc.nouberOfPeriod)
 #endif // TIME_SD
             {
-                times.push_back(t);
-                x_vec.push_back(x);
+                integrateConst(Osc,x,t,t+Osc.T,Osc.dt,bufferInfo);
             }
+            else
+            {
+                integrateConst(Osc,x,t,t+Osc.T,Osc.dt);
+            }
+
+#endif // MULTI_THREAD
 
 
 
@@ -361,18 +377,12 @@ void biffurAndLambda()
         for (auto i:lambdaSum) FileL<<";"<<i/(t-Osc.t0);
         FileL << std::endl;
 
-        for (unsigned int i = 0; i < times.size(); i++)
+        for (auto point:x_P)
         {
             FileP << biff;
-            FileP << ';' << times[i];
-            for(int j = 0; j < Osc.order; j++)
-            {
-                FileP << ';' << x_vec[i][j];
-            }
+            FileP << ';' << point;
             FileP << '\n';
         }
-        times.clear();
-        x_vec.clear();
 
     }
 

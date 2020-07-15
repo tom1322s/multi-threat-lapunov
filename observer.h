@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <array>
+#include <set>
 //typedef std::vector< double > state_type;
 
 //double liczWartosc(state_type &x, int numberPer);
@@ -72,6 +73,25 @@ struct pushBackTimeAndState
             states.push_back( temp );
             tTemp = t;
         }
+    }
+};
+
+struct pushBackPoicare
+{
+    std::set< double >& xP;
+    double xOld;
+
+    pushBackPoicare( std::set< double >& xP )
+    : xP( xP ), xOld(0){ }
+
+    template <typename T>
+    void operator()( T &x , double t )
+    {
+        if(x[0]*xOld < 0 && x[0]>0)
+        {
+            xP.insert(x[3]);
+        }
+        xOld=x[0];
     }
 };
 
