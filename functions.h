@@ -11,7 +11,7 @@ void inicialValues(T &x)
 {
     for (auto& i:x)
     {
-        i = (double)rand() / (4.0*RAND_MAX);
+        i = (double)rand() / (400.0*RAND_MAX);
         //i=0.5;
     }
 }

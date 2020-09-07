@@ -2,11 +2,13 @@
 #include "programs.h"
 #include <time.h>
 
+
 using namespace std;
 
 
 int main()
 {
+
     srand(time(NULL));
     int number;
     cout<<"1 -\ttime Phrase plus Laypunov\n2 -\tbiffur and Laypunov\n3-\ttime Phrase plus Laypunov sd count\n\n";

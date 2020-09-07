@@ -30,17 +30,17 @@ class HarmOsc
         double T, dt;
 
         const int order = ORDER;
-        const double sdVal = 1e-7;
+        const double sdVal = 1e-8;
         const int nouberOfPeriodSkiped = 300.0;
-        const int nouberOfPeriod = 1000;
+        const int nouberOfPeriod = 4000;
         const int nouberOfPeriodCount = 10;
         //nouberOfPeriodPoincare 200;
         const double t0 = 0.0;
 
 
         const double BIFF_START = 0.0;
-        const double BIFF_STOP = 4.0;
-        const double dBIFF = ((BIFF_STOP - BIFF_START) / 200.0);
+        const double BIFF_STOP = 1.5;//4.0;
+        const double dBIFF = ((BIFF_STOP - BIFF_START) / 100.0);
 
         //const double dtVal=37890.0/10.0; // !!!!!!!!
 
