@@ -70,6 +70,7 @@ void timePhraseLaypunov()
 #if MULTI_THREAD
 
         std::array<std::future<state_type>,ORDER> thread;
+
         for (int i = 0; i < Osc.order; i++)
         {
             v[i]=x;
