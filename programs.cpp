@@ -3,6 +3,7 @@
 #include <thread>
 #include <future>
 #include <fstream>
+#include <string>
 //#include <math.h>
 #include <chrono>
 #include <set>
@@ -35,6 +36,16 @@ void timePhraseLaypunov()
 
     state_type x;
     inicialValues(x);
+
+    /*#if OSC_KIND == 2
+    for (auto& i:x)
+    {
+        //i = (double)rand() / (1.0*RAND_MAX);
+        //i +=0.3;
+        //i=0.001;
+    }
+
+    #endif // OSC_KIND*/
 
     std::array<state_type,ORDER> spectrum_z;
     for(auto& i:spectrum_z)
@@ -107,14 +118,19 @@ void timePhraseLaypunov()
             for(int j = 0; j < Osc.order; j++)
             {
                 jacobiMatrix[i][j] = (v[j][i] - x[i])/delta;
+                //std::cout<<jacobiMatrix[i][j]<<"\t";
             }
+            //std::cout<<std::endl;
         }
+
+
 
         for(auto& z:spectrum_z)
         {
             state_type dzdt;
             for(size_t i = 0; i < z.size(); i++)
             {
+                dzdt[i]=0;
                 for(size_t j = 0; j < z.size(); j++)
                 {
                     dzdt[i]+=jacobiMatrix[i][j]*z[j];
@@ -123,6 +139,7 @@ void timePhraseLaypunov()
 
             z=dzdt;
         }
+
 
         for(size_t i = 0; i < spectrum_z.size(); i++)
         {
@@ -133,6 +150,7 @@ void timePhraseLaypunov()
             lambdaSum[i]+=log(liczWartosc(spectrum_z[i]));
             normVector(spectrum_z[i]);
         }
+
 
         if (step % 100 == 0 ) std::cout<<static_cast<int>(t/Osc.T)<<std::endl;
 
@@ -329,6 +347,7 @@ void biffurAndLambda()
                 state_type dzdt;
                 for(size_t i = 0; i < z.size(); i++)
                 {
+                    dzdt[i]=0;
                     for(size_t j = 0; j < z.size(); j++)
                     {
                         dzdt[i]+=jacobiMatrix[i][j]*z[j];
@@ -662,3 +681,274 @@ void timePhraseLaypunov2()
     FileL.close();
 }
 
+void biffurAndLambdaPeriod()
+{
+#if OSC_KIND == 0
+    std::vector<double> periods = {/*0.01,*/0.05,0.1,0.2,0.5,0.75,1,1.25,1.5,2.0,5,10,50,100};
+    double preriodRef = 1;
+#elif OSC_KIND == 1
+    std::vector<double> periods = {0.1,0.5,1,5,10,12.5,15,17.5,19,20,22.5,25,27.5,30,35,40,50,75,100,200};
+    double preriodRef = 19;
+#else
+    std::vector<double> periods = {0.1,0.5,1,5,10,12.5,15,17.5,19,20,22.5,25,27.5,30,35,40,50,75,100,200};
+    double preriodRef = 6.68;
+
+#endif // OSC_KIND
+
+    //double preriodRef = 20;
+
+    std::fstream FileR;
+        FileR.open( "C:\\chwilowy\\prog\\bifurLogs.txt", std::ios::out );
+        if( FileR.good() == false)
+        {
+            std::cout<<"blad"<<std::endl;
+            //std::cerr << "Error: " << strerror(errno);
+            exit(250);
+        }
+
+    for(auto& period:periods)
+    {
+        std::string name = std::to_string(period);
+        //std::cout<<name<<std::endl;
+        for(auto& i:name)
+            if(i=='.') i = 'd';
+        //std::cout<<name<<std::endl;
+        name = 'P' + name;
+
+        std::string sL = "C:\\chwilowy\\prog\\bifurLaponov"+name+".txt";
+        std::string sP = "C:\\chwilowy\\prog\\bifurPoicare"+name+".txt";
+        std::string sT = "C:\\chwilowy\\prog\\bifurtime"+name+".txt";
+
+        std::fstream FileL, FileT, FileP;
+        FileP.open( sP, std::ios::out );
+        FileL.open( sL, std::ios::out );
+        FileT.open( sT, std::ios::out );
+        if( FileP.good() == false ||  FileT.good() == false || FileL.good() == false)
+        {
+            std::cout<<"blad"<<std::endl;
+            //std::cerr << "Error: " << strerror(errno);
+            exit(250);
+        }
+
+        FileR << period << ";" << sL << ";" << sP << ";" << sT << std::endl;
+
+        HarmOsc Osc;
+        //std::vector<double> times;
+        //std::vector<state_type> x_vec;
+        //std::vector<std::vector<double>> lambda;
+
+        state_type x;
+        inicialValues(x);
+
+        std::array<state_type,ORDER> spectrum_z;
+        for(auto& i:spectrum_z)
+        {
+            inicialValues(i);
+        }
+
+        double delta = 1e-6;
+        std::vector<std::vector<double>> calTime;
+
+
+        int counter = 0;
+        for (double biff = Osc.BIFF_START; biff < Osc.BIFF_STOP; biff+=Osc.dBIFF)
+        {
+            std::set<double> x_P;
+            pushBackPoicare bufferInfo(x_P);
+            state_type lambdaSum = {};
+            std::cout<<counter++;
+            Osc.changeBiffurParametr(biff);
+
+            Osc.T = period;
+            //if(period<preriodRef)
+                //Osc.sdVal = sqrt(period/preriodRef) * Osc.sdValRef;
+            //else
+                Osc.sdVal = Osc.sdValRef;
+
+
+            if(period<preriodRef)
+                Osc.nouberOfPeriodSkiped = (preriodRef/period) * Osc.nouberOfPeriodSkipedRef;
+            else
+                Osc.nouberOfPeriodSkiped =  Osc.nouberOfPeriodSkipedRef;
+
+            Osc.printInfo();
+            double t=0.0;
+
+            //
+            if (liczWartosc(x)<1e-3)
+            {
+                inicialValues(x);
+            }
+
+            /*for(auto& i:spectrum_z)
+            {
+                inicialValues(i);
+            }*/
+            //
+
+            #if TIME_SD
+            state_type sd;
+            for(auto& i:sd) i = 1.0;
+            std::vector<state_type> lambdaBuffer;
+    #endif // TIME_SD
+
+            const auto startTime = std::chrono::high_resolution_clock::now();
+
+    #if TIME_SD
+            for (long int step = 0; step < Osc.nouberOfPeriodSkiped || isSdGood(sd, Osc.sdVal); step++)
+    #else
+            for (long int step = 0; step < Osc.nouberOfPeriod; step++)
+    #endif // TIME_SD
+            {
+                t = Osc.t0 + step * Osc.T;
+                std::array<state_type,ORDER> v;
+
+    #if MULTI_THREAD
+
+                std::array<std::future<state_type>,ORDER> thread;
+                for (int i = 0; i < Osc.order; i++)
+                {
+                    v[i]=x;
+                    v[i][i]+=delta;
+                    thread[i] = std::async(std::launch::async, &integrateConstR<HarmOsc,state_type>, Osc,v[i],t,t+Osc.T,Osc.dt);
+                }
+
+    #if TIME_SD
+                if (sd[0]<Osc.sdVal*10)
+    #else
+                if (step > 0.9*Osc.nouberOfPeriod)
+    #endif // TIME_SD
+                {
+                    integrateConst(Osc,x,t,t+Osc.T,Osc.dt,bufferInfo);
+                }
+                else
+                {
+                    integrateConst(Osc,x,t,t+Osc.T,Osc.dt);
+                }
+
+                for (int i = 0; i < Osc.order; i++)
+                {
+                    v[i] = thread[i].get();
+                }
+
+    #else
+                for (int i = 0; i < ORDER; i++)
+                {
+                    v[i] = x;
+                    v[i][i]+=delta;
+                    integrateConst(Osc,v[i],t,t+Osc.T,Osc.dt);
+                }
+    #if TIME_SD
+                if (sd[0]<Osc.sdVal*10)
+    #else
+                if (step > 0.9*Osc.nouberOfPeriod)
+    #endif // TIME_SD
+                {
+                    integrateConst(Osc,x,t,t+Osc.T,Osc.dt,bufferInfo);
+                }
+                else
+                {
+                    integrateConst(Osc,x,t,t+Osc.T,Osc.dt);
+                }
+
+    #endif // MULTI_THREAD
+
+
+
+                std::array<std::array<double,ORDER>,ORDER> jacobiMatrix;
+                for(int i = 0; i < Osc.order; i++)
+                {
+                    for(int j = 0; j < Osc.order; j++)
+                    {
+                        jacobiMatrix[i][j] = (v[j][i] - x[i])/delta;
+                    }
+                }
+
+                for(auto& z:spectrum_z)
+                {
+                    state_type dzdt;
+                    for(size_t i = 0; i < z.size(); i++)
+                    {
+                        dzdt[i]=0;
+                        for(size_t j = 0; j < z.size(); j++)
+                        {
+                            dzdt[i]+=jacobiMatrix[i][j]*z[j];
+                        }
+                    }
+
+                    z=dzdt;
+                }
+
+                for(size_t i = 0; i < spectrum_z.size(); i++)
+                {
+                    for(size_t j = 0; j < i; j++)
+                    {
+                        spectrum_z[i] -= spectrum_z[j] * (spectrum_z[i] & spectrum_z[j]);
+                    }
+                    lambdaSum[i]+=log(liczWartosc(spectrum_z[i]));
+                    normVector(spectrum_z[i]);
+                }
+
+                int valScal;
+                if(Osc.T < preriodRef) valScal = 1000;
+                else valScal = 100;
+                if (step % valScal == 0 ) std::cout<<static_cast<int>(t/Osc.T)<<std::endl;
+
+    #if TIME_SD
+                state_type tempLambda;
+                for(size_t i = 0; i < lambdaSum.size(); i++)
+                {
+                    tempLambda[i]=(lambdaSum[i]/(t-Osc.t0));
+                }
+                lambdaBuffer.push_back(tempLambda);
+
+                int tempScalVal;
+                if(Osc.T < preriodRef) tempScalVal = (preriodRef/period) * 100;
+                else tempScalVal = 100;
+                if(lambdaBuffer.size() >= tempScalVal)
+                {
+                    sd = countSD(lambdaBuffer);
+                    lambdaBuffer.clear();
+                    //for(auto i:sd) std::cout<<i<<"\t";
+                    //std::cout<<std::endl;
+
+                }
+    #endif // TIME_SD
+
+
+            }
+            const auto endTime = std::chrono::high_resolution_clock::now();
+
+            calTime.push_back({biff,duration_cast<duration<double, std::milli>>(endTime-startTime).count()});
+
+            FileL << biff;
+            for (auto i:lambdaSum) FileL<<";"<<i/(t-Osc.t0);
+            FileL << std::endl;
+
+            for (auto point:x_P)
+            {
+                FileP << biff;
+                FileP << ';' << point;
+                FileP << '\n';
+            }
+
+        }
+
+        std::cout<<"Rozpoczynam zapis do pliku\n";
+
+
+
+        double sumT=0;
+        for(auto i:calTime)
+        {
+            FileT << i[0] << ';';
+            FileT << i[1] << ';';
+            FileT << (sumT+=i[1]) << '\n';
+        }
+
+        FileP.close();
+        FileT.close();
+        FileL.close();
+    }
+    FileR.close();
+}

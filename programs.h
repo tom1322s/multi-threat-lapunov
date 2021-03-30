@@ -15,6 +15,7 @@
 
 void timePhraseLaypunov();
 void timePhraseLaypunov2();
+void biffurAndLambdaPeriod();
 void biffurAndLambda();
 
 

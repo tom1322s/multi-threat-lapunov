@@ -30,6 +30,11 @@ int main()
             timePhraseLaypunov2();
         }
         break;
+        case 4:
+        {
+            biffurAndLambdaPeriod();
+        }
+        break;
     }
 
     return 0;
