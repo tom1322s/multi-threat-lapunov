@@ -230,7 +230,7 @@ void HarmOsc::operator() (const state_type &x , state_type &dxdt , const double 
     dxdt[21] = -h*x[21] -pow(x[20],3) +q*sin(eta*t);*/
 
 }
-#else
+#elif OSC_KIND == 2
 
 HarmOsc::HarmOsc()
 {
@@ -366,6 +366,113 @@ void HarmOsc::operator() (const state_type &x , state_type &dxdt , const double 
         dxdt[i*2+1] = -(dxdt[1]+delta)*sin(x[i*2]) -ksi*x[i*2+1];
     }
 
+
+
+
+
+}
+
+#elif OSC_KIND == 3
+
+HarmOsc::HarmOsc()
+{
+    biff_type=3;
+    // 1 - for alfa, 2 - for beta, 3 - for k
+
+    alfa = 0.1;
+    beta = 1;
+    k = 1;
+
+    updatePeriod();
+}
+
+void HarmOsc::updatePeriod()
+{
+    //T=2*3.14/eta;
+    //T = 2*3.14/sqrt(pow(d,2)-pow(a,2)); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //dt=T/dtVal;
+    //T =1.4;
+    T = 2*3.14/4.6403;
+    dt =T/37890.0;
+
+}
+
+void HarmOsc::printInfo() // !!!!!!!!!!!!!!!!!
+{
+    std::cout<<std::endl;
+    std::cout<<"Rozpoczynam symulacje dla\talfa="<<alfa<<"\tbeta="<<beta<<"\tk="<<k<<std::endl;
+    std::cout<<"krok : "<<dt<<std::endl;
+}
+
+
+bool HarmOsc::checkPoincareRequirement(const double t, const double tOld)
+{
+    //return POUNCARE_REQUIREMENT;
+    return 1;//(sin(eta * t) > 0 && sin(eta * t)*sin(eta * tOld) < 0); !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+}
+
+double HarmOsc::calculateTimeToSavePoint(const double t, const double tOld)
+{
+    return 1;//(t - (sin(eta * t) * (t - tOld)) / (sin(eta * t) - sin(eta * tOld)));
+}
+
+void HarmOsc::changeBiffurParametr(double biffVal)
+{
+    switch(biff_type)
+    {
+    case 1:
+        {
+            alfa = biffVal;
+        }
+        break;
+
+    case 2:
+        {
+            beta = biffVal;
+        }
+        break;
+
+    case 3:
+        {
+            k = biffVal;
+        }
+        break;
+
+    }
+
+    updatePeriod();
+}
+
+double HarmOsc::getBiffurParametr()
+{
+    switch(biff_type)
+    {
+    case 1: return alfa;
+    case 2: return beta;
+    case 3: return k;
+
+    }
+    return 0;
+}
+
+
+void HarmOsc::operator() (const state_type &x , state_type &dxdt , const double t ) // !!!!!!!!!!!!!!!!!
+{
+//2
+    //dxdt[0] = x[1];
+    //dxdt[1] = alfa*(1-x[0]*x[0])*x[1]-beta*x[0];
+
+//4+
+
+    for(int i = 0; i<ORDER;i+=2)
+    {
+        double xPrev;
+        if(i==0) xPrev = x[ORDER-2];
+        else xPrev = x[i-2];
+
+        dxdt[i] = x[i+1];
+        dxdt[i+1] = alfa*(1-x[i]*x[i])*x[i+1]-beta*x[i] + k* (xPrev - x[i]);// + 12.95*sin(4.6403*t);
+    }
 
 
 
